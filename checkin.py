@@ -234,8 +234,9 @@ class NewAPICheckin:
                     result['quota_awarded'] = checkin_data.get('quota_awarded')
                 else:
                     msg = data.get('message', '签到失败')
-                    # 今日已签到也视为成功
-                    if '已签到' in msg:
+                    # 今日已签到也视为成功（兼容多种 API 返回文案）
+                    already_checked = ('已签到' in msg or '已经签到' in msg or 'already' in msg.lower())
+                    if already_checked:
                         result['success'] = True
                     result['message'] = msg
             else:
