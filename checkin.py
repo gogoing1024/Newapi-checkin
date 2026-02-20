@@ -233,7 +233,11 @@ class NewAPICheckin:
                     result['checkin_date'] = checkin_data.get('checkin_date')
                     result['quota_awarded'] = checkin_data.get('quota_awarded')
                 else:
-                    result['message'] = data.get('message', '签到失败')
+                    msg = data.get('message', '签到失败')
+                    # 今日已签到也视为成功
+                    if '已签到' in msg:
+                        result['success'] = True
+                    result['message'] = msg
             else:
                 result['message'] = f'HTTP {resp.status_code}: {data.get("message", "未知错误")}'
 
@@ -402,6 +406,7 @@ def main():
                 print(f'  奖励: +{quota_str} 额度 ({quota:,} tokens)')
 
             # 获取本月签到统计
+            checkin_count = 0
             history = client.get_checkin_history()
             if history and history.get('stats'):
                 stats = history['stats']
@@ -416,26 +421,24 @@ def main():
                 print(f'  统计: 本月已签 {checkin_count} 天，累计 {total_str} 额度')
 
             # 收集结果用于钉钉通知
-            account_result = {
+            checkin_results.append({
                 'name': name,
                 'success': True,
                 'message': result['message'],
                 'quota_awarded': result.get('quota_awarded'),
                 'checkin_count': checkin_count
-            }
-            checkin_results.append(account_result)
+            })
         else:
             fail_count += 1
             print(f'  结果: ❌ {result["message"]}')
 
-        # 收集结果用于钉钉通知
-        account_result = {
-            'name': name,
-            'success': False,
-            'message': result['message'],
-            'session_expired': 'session' in result['message'].lower() or '认证' in result['message']
-        }
-        checkin_results.append(account_result)
+            # 收集结果用于钉钉通知
+            checkin_results.append({
+                'name': name,
+                'success': False,
+                'message': result['message'],
+                'session_expired': 'session' in result['message'].lower() or '认证' in result['message']
+            })
 
         print()
 
